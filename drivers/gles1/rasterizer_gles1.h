@@ -796,7 +796,7 @@ class RasterizerGLES1 : public Rasterizer {
 	bool lighting;
 	float line_width;
 
-	_FORCE_INLINE_ void _add_geometry( const Geometry* p_geometry, const InstanceData *p_instance, const Geometry *p_geometry_cmp, const GeometryOwner *p_owner);
+	void _add_geometry( const Geometry* p_geometry, const InstanceData *p_instance, const Geometry *p_geometry_cmp, const GeometryOwner *p_owner, int p_material = -1);
 
 	void _render_list_forward(RenderList *p_render_list, bool p_reverse_cull, bool p_alpha_pass);
 
