@@ -376,6 +376,7 @@ MemoryPoolStaticMalloc::MemoryPoolStaticMalloc() {
 #endif
 
 	mutex = NULL;
+	// NOTE: a tools build will still have threads going on which will be bad for this
 #ifndef NO_THREADS
 
 	mutex = Mutex::create(); // at this point, this should work

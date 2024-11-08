@@ -229,8 +229,7 @@ def configure(env):
 
         elif (env["target"] == "debug"):
 
-            #env.Append(CCFLAGS=['/Z7', '/DDEBUG_ENABLED', '/DDEBUG_MEMORY_ENABLED', '/DD3D_DEBUG_INFO', '/Od', '/EHsc'])
-            env.Append(CCFLAGS=['/Z7', '/DDEBUG_ENABLED', '/Od', '/EHsc'])
+            env.Append(CCFLAGS=['/Z7', '/DDEBUG_ENABLED', '/DDEBUG_MEMORY_ENABLED', '/DD3D_DEBUG_INFO', '/Od', '/EHsc'])
             env.Append(LINKFLAGS=['/SUBSYSTEM:CONSOLE'])
             env.Append(LINKFLAGS=['/DEBUG'])
 
@@ -248,7 +247,7 @@ def configure(env):
         env.Append(CCFLAGS=['/DGLES1_ENABLED'])
 		
 		# "temporary" until workaround for InterlockedCompareExchange64 missing on XP shows up
-        env.Append(CCFLAGS=['/DNO_THREADS'])
+        #env.Append(CCFLAGS=['/DNO_THREADS'])
 		
         LIBS = ['winmm', 'opengl32', 'dsound', 'kernel32', 'ole32', 'oleaut32', 'user32', 'gdi32', 'IPHLPAPI', 'Shlwapi', 'wsock32', 'ws2_32', 'shell32', 'advapi32', 'dinput8', 'dxguid']
         env.Append(LINKFLAGS=[p + env["LIBSUFFIX"] for p in LIBS])

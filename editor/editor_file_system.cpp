@@ -1261,7 +1261,13 @@ EditorFileSystem::EditorFileSystem() {
 
 	thread = NULL;
 	scanning = false;
+
+#if NO_THREADS
+	use_threads = false;
+#else
 	use_threads = true;
+#endif
+	
 	thread_sources = NULL;
 	new_filesystem = NULL;
 
