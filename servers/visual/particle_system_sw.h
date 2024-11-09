@@ -105,7 +105,7 @@ struct ParticleSystemProcessSW {
 
 	bool valid;
 	float particle_system_time;
-	uint32_t rand_seed;
+	//uint32_t rand_seed;
 	Vector<ParticleData> particle_data;
 
 	void process(const ParticleSystemSW *p_system, const Transform &p_transform, float p_time);

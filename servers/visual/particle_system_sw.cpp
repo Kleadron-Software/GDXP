@@ -31,6 +31,8 @@
 #include "particle_system_sw.h"
 #include "sort.h"
 
+static uint32_t particle_system_rand_seed = 1234567;
+
 ParticleSystemSW::ParticleSystemSW() {
 
 	amount = 8;
@@ -175,33 +177,33 @@ void ParticleSystemProcessSW::process(const ParticleSystemSW *p_system, const Tr
 			if (p_system->emitting) {
 				if (emission_point_count == 0) { //use AABB
 					if (p_system->local_coordinates)
-						p.pos = p_system->emission_half_extents * Vector3(_rand_from_seed(&rand_seed), _rand_from_seed(&rand_seed), _rand_from_seed(&rand_seed));
+						p.pos = p_system->emission_half_extents * Vector3(_rand_from_seed(&particle_system_rand_seed), _rand_from_seed(&particle_system_rand_seed), _rand_from_seed(&particle_system_rand_seed));
 					else
-						p.pos = p_transform.xform(p_system->emission_half_extents * Vector3(_rand_from_seed(&rand_seed), _rand_from_seed(&rand_seed), _rand_from_seed(&rand_seed)));
+						p.pos = p_transform.xform(p_system->emission_half_extents * Vector3(_rand_from_seed(&particle_system_rand_seed), _rand_from_seed(&particle_system_rand_seed), _rand_from_seed(&particle_system_rand_seed)));
 				} else {
 					//use preset positions
 					if (p_system->local_coordinates)
-						p.pos = r[_irand_from_seed(&rand_seed) % emission_point_count];
+						p.pos = r[_irand_from_seed(&particle_system_rand_seed) % emission_point_count];
 					else
-						p.pos = p_transform.xform(r[_irand_from_seed(&rand_seed) % emission_point_count]);
+						p.pos = p_transform.xform(r[_irand_from_seed(&particle_system_rand_seed) % emission_point_count]);
 				}
 
-				float angle1 = _rand_from_seed(&rand_seed) * p_system->particle_vars[VS::PARTICLE_SPREAD] * Math_PI;
-				float angle2 = _rand_from_seed(&rand_seed) * 20.0 * Math_PI; // make it more random like
+				float angle1 = _rand_from_seed(&particle_system_rand_seed) * p_system->particle_vars[VS::PARTICLE_SPREAD] * Math_PI;
+				float angle2 = _rand_from_seed(&particle_system_rand_seed) * 20.0 * Math_PI; // make it more random like
 
 				Vector3 rot_xz = Vector3(Math::sin(angle1), 0.0, Math::cos(angle1));
 				Vector3 rot = Vector3(Math::cos(angle2) * rot_xz.x, Math::sin(angle2) * rot_xz.x, rot_xz.z);
 
-				p.vel = (rot * p_system->particle_vars[VS::PARTICLE_LINEAR_VELOCITY] + rot * p_system->particle_randomness[VS::PARTICLE_LINEAR_VELOCITY] * _rand_from_seed(&rand_seed));
+				p.vel = (rot * p_system->particle_vars[VS::PARTICLE_LINEAR_VELOCITY] + rot * p_system->particle_randomness[VS::PARTICLE_LINEAR_VELOCITY] * _rand_from_seed(&particle_system_rand_seed));
 				if (!p_system->local_coordinates)
 					p.vel = p_transform.basis.xform(p.vel);
 
 				p.vel += p_system->emission_base_velocity;
 
-				p.rot = p_system->particle_vars[VS::PARTICLE_INITIAL_ANGLE] + p_system->particle_randomness[VS::PARTICLE_INITIAL_ANGLE] * _rand_from_seed(&rand_seed);
+				p.rot = p_system->particle_vars[VS::PARTICLE_INITIAL_ANGLE] + p_system->particle_randomness[VS::PARTICLE_INITIAL_ANGLE] * _rand_from_seed(&particle_system_rand_seed);
 				p.active = true;
 				for (int r = 0; r < PARTICLE_RANDOM_NUMBERS; r++)
-					p.random[r] = _rand_from_seed(&rand_seed);
+					p.random[r] = _rand_from_seed(&particle_system_rand_seed);
 
 			} else {
 
@@ -257,7 +259,7 @@ void ParticleSystemProcessSW::process(const ParticleSystemSW *p_system, const Tr
 ParticleSystemProcessSW::ParticleSystemProcessSW() {
 
 	particle_system_time = 0;
-	rand_seed = 1234567;
+	//rand_seed = 1234567;
 	valid = false;
 }
 
