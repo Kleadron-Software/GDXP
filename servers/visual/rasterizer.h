@@ -167,6 +167,12 @@ public:
 		SHADOW_FILTER_VSM,
 	};
 
+	enum ShadowFilterQuality {
+		SHADOW_FILTER_QUALITY_NEAREST,
+		SHADOW_FILTER_QUALITY_TRI,
+		SHADOW_FILTER_QUALITY_QUAD,
+	};
+
 	/* TEXTURE API */
 
 	virtual RID texture_create() = 0;

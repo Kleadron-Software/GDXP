@@ -3950,6 +3950,7 @@ void RasterizerGLES2::begin_frame() {
 #ifdef TOOLS_ENABLED
 	canvas_shader.set_conditional(CanvasShaderGLES2::USE_PIXEL_SNAP, GLOBAL_DEF("display/use_2d_pixel_snap", false));
 	shadow_filter = ShadowFilterTechnique(int(Globals::get_singleton()->get("rasterizer/shadow_filter")));
+	shadow_filter_quality = ShadowFilterQuality(int(Globals::get_singleton()->get("rasterizer/shadow_filter_quality")));
 #endif
 
 	canvas_shader.set_conditional(CanvasShaderGLES2::SHADOW_PCF5, shadow_filter == SHADOW_FILTER_PCF5);
@@ -4867,6 +4868,8 @@ bool RasterizerGLES2::_setup_material(const Geometry *p_geometry, const Material
 	material_shader.set_conditional(MaterialShaderGLES2::USE_SHADOW_PCF, shadow_filter == SHADOW_FILTER_PCF5 || shadow_filter == SHADOW_FILTER_PCF13);
 	material_shader.set_conditional(MaterialShaderGLES2::USE_SHADOW_PCF_HQ, shadow_filter == SHADOW_FILTER_PCF13);
 	material_shader.set_conditional(MaterialShaderGLES2::USE_SHADOW_ESM, shadow_filter == SHADOW_FILTER_ESM);
+	material_shader.set_conditional(MaterialShaderGLES2::USE_SHADOW_FILTER_TRI, shadow_filter_quality == SHADOW_FILTER_QUALITY_TRI);
+	material_shader.set_conditional(MaterialShaderGLES2::USE_SHADOW_FILTER_QUAD, shadow_filter_quality == SHADOW_FILTER_QUALITY_QUAD);
 	material_shader.set_conditional(MaterialShaderGLES2::USE_LIGHTMAP_ON_UV2, p_material->flags[VS::MATERIAL_FLAG_LIGHTMAP_ON_UV2]);
 	material_shader.set_conditional(MaterialShaderGLES2::USE_COLOR_ATTRIB_SRGB_TO_LINEAR, p_material->flags[VS::MATERIAL_FLAG_COLOR_ARRAY_SRGB] && current_env && current_env->fx_enabled[VS::ENV_FX_SRGB]);
 
@@ -10744,6 +10747,8 @@ RasterizerGLES2::RasterizerGLES2(bool p_compress_arrays, bool p_keep_ram_copy, b
 	read_depth_supported = true; //todo check for extension
 	shadow_filter = ShadowFilterTechnique((int)(GLOBAL_DEF("rasterizer/shadow_filter", SHADOW_FILTER_PCF5)));
 	Globals::get_singleton()->set_custom_property_info("rasterizer/shadow_filter", PropertyInfo(Variant::INT, "rasterizer/shadow_filter", PROPERTY_HINT_ENUM, "None,PCF5,PCF13,ESM"));
+	shadow_filter_quality = ShadowFilterQuality((int)GLOBAL_DEF("rasterizer/shadow_filter_quality", SHADOW_FILTER_QUALITY_NEAREST));
+	Globals::get_singleton()->set_custom_property_info("rasterizer/shadow_filter_quality", PropertyInfo(Variant::INT, "rasterizer/shadow_filter_quality", PROPERTY_HINT_ENUM, "Nearest,Tri-Bilinear,Quad-Bilinear"));
 	use_fp16_fb = bool(GLOBAL_DEF("rasterizer/fp16_framebuffer", true));
 	use_shadow_mapping = true;
 	use_fast_texture_filter = !bool(GLOBAL_DEF("rasterizer/trilinear_mipmap_filter", true));

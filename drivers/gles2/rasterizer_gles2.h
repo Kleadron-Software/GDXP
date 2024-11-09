@@ -95,6 +95,7 @@ class RasterizerGLES2 : public Rasterizer {
 	bool use_16bits_fbo;
 
 	ShadowFilterTechnique shadow_filter;
+	ShadowFilterQuality shadow_filter_quality;
 
 	bool use_shadow_esm;
 	bool use_shadow_pcf;

@@ -654,6 +654,60 @@ uniform float shadow_darkening;
 
 #endif
 
+#if !defined(USE_SHADOW_FILTER_TRI) && !defined(USE_SHADOW_FILTER_QUAD)
+#define SAMPLE_SHADOW_TEX_0_TO_1(m_coord,m_depth) (SHADOW_DEPTH(shadow_texture,m_coord) < m_depth ?  0.0 : 1.0)
+#else
+
+float SAMPLE_SHADOW_TEX_0_TO_1(vec2 p_uv,float p_depth) {
+
+	vec2 unnormalized = p_uv/shadow_texel_size;
+	vec2 fractional = fract(unnormalized);
+	unnormalized = floor(unnormalized);
+	
+	float mix_final;
+	
+	#ifdef USE_SHADOW_FILTER_TRI
+	// n64-style triangular filter, slightly cheaper?
+	bool determinant = fractional.x > fractional.y;
+	
+	if (determinant)
+	{
+		float depthTL = SHADOW_DEPTH(shadow_texture,(unnormalized + vec2 (-0.5, -0.5))* shadow_texel_size) < p_depth ?  0.0 : 1.0;
+		float depthTR = SHADOW_DEPTH(shadow_texture,(unnormalized + vec2 (0.5, -0.5))* shadow_texel_size) < p_depth ?  0.0 : 1.0;
+		float depthBR = SHADOW_DEPTH(shadow_texture,(unnormalized + vec2 (0.5, 0.5))* shadow_texel_size) < p_depth ?  0.0 : 1.0;
+		
+		float mixT = mix(depthTL, depthTR, fractional.x);
+		mix_final = mix(mixT, depthBR, fractional.y);
+	}
+	else
+	{
+		float depthTL = SHADOW_DEPTH(shadow_texture,(unnormalized + vec2 (-0.5, -0.5))* shadow_texel_size) < p_depth ?  0.0 : 1.0;
+		float depthBL = SHADOW_DEPTH(shadow_texture,(unnormalized + vec2 (-0.5, 0.5))* shadow_texel_size) < p_depth ?  0.0 : 1.0;
+		float depthBR = SHADOW_DEPTH(shadow_texture,(unnormalized + vec2 (0.5, 0.5))* shadow_texel_size) < p_depth ?  0.0 : 1.0;
+		
+		float mixB = mix(depthBL, depthBR, fractional.x);
+		mix_final = mix(depthTL, mixB, fractional.y);
+	}
+	
+	#endif
+	
+	#ifdef USE_SHADOW_FILTER_QUAD
+	float depthTL = SHADOW_DEPTH(shadow_texture,(unnormalized + vec2 (-0.5, -0.5))* shadow_texel_size) < p_depth ?  0.0 : 1.0;
+	float depthTR = SHADOW_DEPTH(shadow_texture,(unnormalized + vec2 (0.5, -0.5))* shadow_texel_size) < p_depth ?  0.0 : 1.0;
+	float depthBL = SHADOW_DEPTH(shadow_texture,(unnormalized + vec2 (-0.5, 0.5))* shadow_texel_size) < p_depth ?  0.0 : 1.0;
+	float depthBR = SHADOW_DEPTH(shadow_texture,(unnormalized + vec2 (0.5, 0.5))* shadow_texel_size) < p_depth ?  0.0 : 1.0;
+	
+	// bilinear interpolation
+	float mixT = mix(depthTL, depthTR, fractional.x);
+	float mixB = mix(depthBL, depthBR, fractional.x);
+	mix_final = mix(mixT, mixB, fractional.y);
+	#endif
+	
+	return mix_final;
+
+}
+#endif
+
 #ifdef USE_SHADOW_PCF
 
 
@@ -662,19 +716,19 @@ uniform float shadow_darkening;
 
 float SAMPLE_SHADOW_TEX( highp vec2 coord, highp float refdepth) {
 
-	float avg=(SHADOW_DEPTH(shadow_texture,coord) < refdepth ?  0.0 : 1.0);
-	avg+=(SHADOW_DEPTH(shadow_texture,coord+vec2(shadow_texel_size.x,0.0)) < refdepth ?  0.0 : 1.0);
-	avg+=(SHADOW_DEPTH(shadow_texture,coord+vec2(-shadow_texel_size.x,0.0)) < refdepth ?  0.0 : 1.0);
-	avg+=(SHADOW_DEPTH(shadow_texture,coord+vec2(0.0,shadow_texel_size.y)) < refdepth ?  0.0 : 1.0);
-	avg+=(SHADOW_DEPTH(shadow_texture,coord+vec2(0.0,-shadow_texel_size.y)) < refdepth ?  0.0 : 1.0);
-	avg+=(SHADOW_DEPTH(shadow_texture,coord+vec2(shadow_texel_size.x,shadow_texel_size.y)) < refdepth ?  0.0 : 1.0);
-	avg+=(SHADOW_DEPTH(shadow_texture,coord+vec2(-shadow_texel_size.x,shadow_texel_size.y)) < refdepth ?  0.0 : 1.0);
-	avg+=(SHADOW_DEPTH(shadow_texture,coord+vec2(shadow_texel_size.x,-shadow_texel_size.y)) < refdepth ?  0.0 : 1.0);
-	avg+=(SHADOW_DEPTH(shadow_texture,coord+vec2(-shadow_texel_size.x,-shadow_texel_size.y)) < refdepth ?  0.0 : 1.0);
-	avg+=(SHADOW_DEPTH(shadow_texture,coord+vec2(shadow_texel_size.x*2.0,0.0)) < refdepth ?  0.0 : 1.0);
-	avg+=(SHADOW_DEPTH(shadow_texture,coord+vec2(-shadow_texel_size.x*2.0,0.0)) < refdepth ?  0.0 : 1.0);
-	avg+=(SHADOW_DEPTH(shadow_texture,coord+vec2(0.0,shadow_texel_size.y*2.0)) < refdepth ?  0.0 : 1.0);
-	avg+=(SHADOW_DEPTH(shadow_texture,coord+vec2(0.0,-shadow_texel_size.y*2.0)) < refdepth ?  0.0 : 1.0);
+	float avg=SAMPLE_SHADOW_TEX_0_TO_1(coord, refdepth);
+	avg+=SAMPLE_SHADOW_TEX_0_TO_1(coord+vec2(shadow_texel_size.x,0.0), refdepth);
+	avg+=SAMPLE_SHADOW_TEX_0_TO_1(coord+vec2(-shadow_texel_size.x,0.0), refdepth);
+	avg+=SAMPLE_SHADOW_TEX_0_TO_1(coord+vec2(0.0,shadow_texel_size.y), refdepth);
+	avg+=SAMPLE_SHADOW_TEX_0_TO_1(coord+vec2(0.0,-shadow_texel_size.y), refdepth);
+	avg+=SAMPLE_SHADOW_TEX_0_TO_1(coord+vec2(shadow_texel_size.x,shadow_texel_size.y), refdepth);
+	avg+=SAMPLE_SHADOW_TEX_0_TO_1(coord+vec2(-shadow_texel_size.x,shadow_texel_size.y), refdepth);
+	avg+=SAMPLE_SHADOW_TEX_0_TO_1(coord+vec2(shadow_texel_size.x,-shadow_texel_size.y), refdepth);
+	avg+=SAMPLE_SHADOW_TEX_0_TO_1(coord+vec2(-shadow_texel_size.x,-shadow_texel_size.y), refdepth);
+	avg+=SAMPLE_SHADOW_TEX_0_TO_1(coord+vec2(shadow_texel_size.x*2.0,0.0), refdepth);
+	avg+=SAMPLE_SHADOW_TEX_0_TO_1(coord+vec2(-shadow_texel_size.x*2.0,0.0), refdepth);
+	avg+=SAMPLE_SHADOW_TEX_0_TO_1(coord+vec2(0.0,shadow_texel_size.y*2.0), refdepth);
+	avg+=SAMPLE_SHADOW_TEX_0_TO_1(coord+vec2(0.0,-shadow_texel_size.y*2.0), refdepth);
 	return avg*(1.0/13.0);
 }
 
@@ -682,11 +736,11 @@ float SAMPLE_SHADOW_TEX( highp vec2 coord, highp float refdepth) {
 
 float SAMPLE_SHADOW_TEX( highp vec2 coord, highp float refdepth) {
 
-	float avg=(SHADOW_DEPTH(shadow_texture,coord) < refdepth ?  0.0 : 1.0);
-	avg+=(SHADOW_DEPTH(shadow_texture,coord+vec2(shadow_texel_size.x,0.0)) < refdepth ?  0.0 : 1.0);
-	avg+=(SHADOW_DEPTH(shadow_texture,coord+vec2(-shadow_texel_size.x,0.0)) < refdepth ?  0.0 : 1.0);
-	avg+=(SHADOW_DEPTH(shadow_texture,coord+vec2(0.0,shadow_texel_size.y)) < refdepth ?  0.0 : 1.0);
-	avg+=(SHADOW_DEPTH(shadow_texture,coord+vec2(0.0,-shadow_texel_size.y)) < refdepth ?  0.0 : 1.0);
+	float avg=SAMPLE_SHADOW_TEX_0_TO_1(coord, refdepth);
+	avg+=SAMPLE_SHADOW_TEX_0_TO_1(coord+vec2(shadow_texel_size.x,0.0), refdepth);
+	avg+=SAMPLE_SHADOW_TEX_0_TO_1(coord+vec2(-shadow_texel_size.x,0.0), refdepth);
+	avg+=SAMPLE_SHADOW_TEX_0_TO_1(coord+vec2(0.0,shadow_texel_size.y), refdepth);
+	avg+=SAMPLE_SHADOW_TEX_0_TO_1(coord+vec2(0.0,-shadow_texel_size.y), refdepth);
 	return avg*0.2;
 }
 
@@ -766,7 +820,7 @@ float SAMPLE_SHADOW_TEX(vec2 p_uv,float p_depth) {
 
 #if !defined(USE_SHADOW_PCF) && !defined(USE_SHADOW_ESM)
 
-#define SAMPLE_SHADOW_TEX(m_coord,m_depth) (SHADOW_DEPTH(shadow_texture,m_coord) < m_depth ?  0.0 : 1.0)
+#define SAMPLE_SHADOW_TEX(m_coord,m_depth) SAMPLE_SHADOW_TEX_0_TO_1(m_coord, m_depth)
 
 #endif
 
