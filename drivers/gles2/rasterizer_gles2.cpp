@@ -4868,8 +4868,7 @@ bool RasterizerGLES2::_setup_material(const Geometry *p_geometry, const Material
 	material_shader.set_conditional(MaterialShaderGLES2::USE_SHADOW_PCF, shadow_filter == SHADOW_FILTER_PCF5 || shadow_filter == SHADOW_FILTER_PCF13);
 	material_shader.set_conditional(MaterialShaderGLES2::USE_SHADOW_PCF_HQ, shadow_filter == SHADOW_FILTER_PCF13);
 	material_shader.set_conditional(MaterialShaderGLES2::USE_SHADOW_ESM, shadow_filter == SHADOW_FILTER_ESM);
-	material_shader.set_conditional(MaterialShaderGLES2::USE_SHADOW_FILTER_TRI, shadow_filter_quality == SHADOW_FILTER_QUALITY_TRI);
-	material_shader.set_conditional(MaterialShaderGLES2::USE_SHADOW_FILTER_QUAD, shadow_filter_quality == SHADOW_FILTER_QUALITY_QUAD);
+	material_shader.set_conditional(MaterialShaderGLES2::USE_SHADOW_FILTER_BILINEAR, shadow_filter_quality == SHADOW_FILTER_QUALITY_BILINEAR);
 	material_shader.set_conditional(MaterialShaderGLES2::USE_LIGHTMAP_ON_UV2, p_material->flags[VS::MATERIAL_FLAG_LIGHTMAP_ON_UV2]);
 	material_shader.set_conditional(MaterialShaderGLES2::USE_COLOR_ATTRIB_SRGB_TO_LINEAR, p_material->flags[VS::MATERIAL_FLAG_COLOR_ARRAY_SRGB] && current_env && current_env->fx_enabled[VS::ENV_FX_SRGB]);
 
@@ -9629,17 +9628,6 @@ bool RasterizerGLES2::ShadowBuffer::init(int p_size, bool p_use_depth) {
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, size, size, 0,
 				GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, NULL);
 
-#ifdef GLEW_ENABLED
-		if (bool(GLOBAL_DEF("rasterizer/depth_shadows_filtered", false))) {
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		}
-		else {
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		}
-#endif
-
 		// Attach the depth texture to FBO depth attachment point
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
 				GL_TEXTURE_2D, depth, 0);
@@ -10747,8 +10735,8 @@ RasterizerGLES2::RasterizerGLES2(bool p_compress_arrays, bool p_keep_ram_copy, b
 	read_depth_supported = true; //todo check for extension
 	shadow_filter = ShadowFilterTechnique((int)(GLOBAL_DEF("rasterizer/shadow_filter", SHADOW_FILTER_PCF5)));
 	Globals::get_singleton()->set_custom_property_info("rasterizer/shadow_filter", PropertyInfo(Variant::INT, "rasterizer/shadow_filter", PROPERTY_HINT_ENUM, "None,PCF5,PCF13,ESM"));
-	shadow_filter_quality = ShadowFilterQuality((int)GLOBAL_DEF("rasterizer/shadow_filter_quality", SHADOW_FILTER_QUALITY_NEAREST));
-	Globals::get_singleton()->set_custom_property_info("rasterizer/shadow_filter_quality", PropertyInfo(Variant::INT, "rasterizer/shadow_filter_quality", PROPERTY_HINT_ENUM, "Nearest,Tri-Bilinear,Quad-Bilinear"));
+	shadow_filter_quality = ShadowFilterQuality((int)GLOBAL_DEF("rasterizer/shadow_filter_quality", SHADOW_FILTER_QUALITY_BILINEAR));
+	Globals::get_singleton()->set_custom_property_info("rasterizer/shadow_filter_quality", PropertyInfo(Variant::INT, "rasterizer/shadow_filter_quality", PROPERTY_HINT_ENUM, "Nearest,Bilinear"));
 	use_fp16_fb = bool(GLOBAL_DEF("rasterizer/fp16_framebuffer", true));
 	use_shadow_mapping = true;
 	use_fast_texture_filter = !bool(GLOBAL_DEF("rasterizer/trilinear_mipmap_filter", true));
