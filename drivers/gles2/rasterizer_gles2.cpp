@@ -5866,9 +5866,16 @@ void RasterizerGLES2::_render(const Geometry *p_geometry, const Material *p_mate
 
 			ParticleSystemProcessSW &pp = particles_instance->particles_process;
 			float td = time_delta; //MIN(time_delta,1.0/10.0);
-			pp.process(&particles->data, particles_instance->transform, td);
-			ERR_EXPLAIN("A parameter in the particle system is not correct.");
-			ERR_FAIL_COND(!pp.valid);
+
+			// prevent particle system from being updated multiple times in a single frame
+			if (particles_instance->last_processed_frame != frame) {
+				pp.process(&particles->data, particles_instance->transform, td);
+
+				ERR_EXPLAIN("A parameter in the particle system is not correct.");
+				ERR_FAIL_COND(!pp.valid);
+
+				particles_instance->last_processed_frame = frame;
+			}
 
 			Transform camera;
 			if (shadow)

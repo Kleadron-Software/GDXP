@@ -541,7 +541,11 @@ class RasterizerGLES2 : public Rasterizer {
 		ParticleSystemProcessSW particles_process;
 		Transform transform;
 
-		ParticlesInstance() {}
+		uint64_t last_processed_frame;
+
+		ParticlesInstance() {
+			last_processed_frame = -1;
+		}
 	};
 
 	mutable RID_Owner<ParticlesInstance> particles_instance_owner;
