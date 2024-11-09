@@ -2583,7 +2583,7 @@ String OS_Windows::get_data_dir() const {
 			if (!use_godot)
 				return (OS::get_singleton()->get_environment("APPDATA") + "/" + an).replace("\\", "/");
 			else
-				return (OS::get_singleton()->get_environment("APPDATA") + "/Godot/app_userdata/" + an).replace("\\", "/");
+				return (OS::get_singleton()->get_environment("APPDATA") + "/GDXP/app_userdata/" + an).replace("\\", "/");
 		}
 	}
 
