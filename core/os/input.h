@@ -82,8 +82,6 @@ public:
 	virtual bool is_mouse_button_pressed(int p_button) = 0;
 	virtual bool is_joy_button_pressed(int p_device, int p_button) = 0;
 	virtual bool is_action_pressed(const StringName &p_action) = 0;
-	virtual bool is_action_just_pressed(const StringName &p_action) = 0;
-	virtual bool is_action_just_released(const StringName &p_action) = 0;
 
 	virtual float get_joy_axis(int p_device, int p_axis) = 0;
 	virtual String get_joy_name(int p_idx) = 0;

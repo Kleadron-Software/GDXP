@@ -145,16 +145,6 @@ bool InputDefault::is_action_pressed(const StringName &p_action) {
 	return false;
 }
 
-// UNIMPLEMENTED
-bool InputDefault::is_action_just_pressed(const StringName &p_action) {
-	return false;
-}
-
-// UNIMPLEMENTED
-bool InputDefault::is_action_just_released(const StringName &p_action) {
-	return false;
-}
-
 float InputDefault::get_joy_axis(int p_device, int p_axis) {
 
 	_THREAD_SAFE_METHOD_
