@@ -268,6 +268,43 @@ public:
 		OperatorNode() { type = TYPE_OPERATOR; }
 	};
 
+	struct PatternNode : public Node {
+
+		enum PatternType {
+			PT_CONSTANT,
+			PT_BIND,
+			PT_DICTIONARY,
+			PT_ARRAY,
+			PT_IGNORE_REST,
+			PT_WILDCARD
+		};
+
+		PatternType pt_type;
+
+		Node *constant;
+		StringName bind;
+		Map<ConstantNode*, PatternNode*> dictionary;
+		Vector<PatternNode*> array;
+
+	};
+
+	struct PatternBranchNode : public Node {
+		Vector<PatternNode*> patterns;
+		BlockNode *body;
+	};
+
+	struct MatchNode : public Node {
+		Node *val_to_match;
+		Vector<PatternBranchNode*> branches;
+
+		struct CompiledPatternBranch {
+			Node *compiled_pattern;
+			BlockNode *body;
+		};
+
+		Vector<CompiledPatternBranch> compiled_pattern_branches;
+	};
+
 	struct ControlFlowNode : public Node {
 		enum CFType {
 			CF_IF,
@@ -276,13 +313,16 @@ public:
 			CF_SWITCH,
 			CF_BREAK,
 			CF_CONTINUE,
-			CF_RETURN
+			CF_RETURN,
+			CF_MATCH
 		};
 
 		CFType cf_type;
 		Vector<Node *> arguments;
 		BlockNode *body;
 		BlockNode *body_else;
+
+		MatchNode *match;
 
 		ControlFlowNode *_else; //used for if
 		ControlFlowNode() {
@@ -450,6 +490,13 @@ private:
 	Node *_parse_expression(Node *p_parent, bool p_static, bool p_allow_assign = false, bool p_parsing_constant = false);
 	Node *_reduce_expression(Node *p_node, bool p_to_const = false);
 	Node *_parse_and_reduce_expression(Node *p_parent, bool p_static, bool p_reduce_const = false, bool p_allow_assign = false);
+
+
+	PatternNode *_parse_pattern(bool p_static);
+	void _parse_pattern_block(BlockNode *p_block, Vector<PatternBranchNode*> &p_branches, bool p_static);
+	void _transform_match_statment(BlockNode *p_block, MatchNode *p_match_statement);
+	void _generate_pattern(PatternNode *p_pattern, Node *p_node_to_match, Node *&p_resulting_node, Map<StringName, Node*> &p_bindings);
+
 
 	void _parse_block(BlockNode *p_block, bool p_static);
 	void _parse_extends(ClassNode *p_class);
