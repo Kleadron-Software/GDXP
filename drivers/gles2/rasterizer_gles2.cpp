@@ -9658,54 +9658,6 @@ bool RasterizerGLES2::ShadowBuffer::init(int p_size, bool p_use_depth) {
 		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
 				GL_RENDERBUFFER, rbo);
 	}
-
-#if 0
-
-	if (!p_use_depth) {
-
-
-		print_line("try no depth!");
-
-		glGenTextures(1, &rgba);
-		glBindTexture(GL_TEXTURE_2D, rgba);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, size, size, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, rgba, 0);
-/*
-		glGenRenderbuffers(1, &depth);
-		glBindRenderbuffer(GL_RENDERBUFFER, depth);
-		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, p_size, p_size);
-		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depth);
-*/
-		glGenTextures(1, &depth);
-		glBindTexture(GL_TEXTURE_2D, depth);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16, size, size, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, NULL);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depth, 0);
-
-	} else {
-
-//		glGenRenderbuffers(1, &rbo);
-//		glBindRenderbuffer(GL_RENDERBUFFER, rbo);
-
-		glGenTextures(1, &depth);
-		glBindTexture(GL_TEXTURE_2D, depth);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, size, size, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, NULL);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depth, 0);
-
-	}
-
-#endif
 	GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 //printf("errnum: %x\n",status);
 #ifdef GLEW_ENABLED
@@ -9721,44 +9673,6 @@ bool RasterizerGLES2::ShadowBuffer::init(int p_size, bool p_use_depth) {
 	if (p_use_depth) {
 		//glDrawBuffer(GL_BACK);
 	}
-#endif
-
-#if 0
-	glGenFramebuffers(1, &fbo_blur);
-	glBindFramebuffer(GL_FRAMEBUFFER, fbo_blur);
-
-	glGenRenderbuffers(1, &rbo_blur);
-	glBindRenderbuffer(GL_RENDERBUFFER, rbo_blur);
-
-	glGenTextures(1, &blur);
-	glBindTexture(GL_TEXTURE_2D, blur);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, size, size, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-//	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16, size, size, 0,
-//			GL_DEPTH_COMPONENT16, GL_UNSIGNED_SHORT, NULL);
-
-	   // Attach the RGBA texture to FBO color attachment point
-	   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-				  GL_TEXTURE_2D, blur, 0);
-
-	   // Allocate 16-bit depth buffer
-	  /* glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, size, size);
-
-	   // Attach the render buffer as depth buffer - will be ignored
-	   glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-				     GL_RENDERBUFFER, rbo_blur);
-*/
-	status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-	OS::get_singleton()->print("Status: %x\n",status);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	DEBUG_TEST_ERROR("Shadow Blur Buffer Init");
-	ERR_FAIL_COND_V( status != GL_FRAMEBUFFER_COMPLETE,false );
 #endif
 
 	return true;
