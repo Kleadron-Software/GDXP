@@ -10102,11 +10102,11 @@ void RasterizerGLES2::init() {
 		}
 	}
 
-	// Check for GL 2.1 compatibility, if not bail out
-	if (!(glewIsSupported("GL_VERSION_2_1") && framebuffer_object_is_supported)) {
-		ERR_PRINT("Your system's graphic drivers seem not to support OpenGL 2.1 / GLES 2.0, sorry :(\n"
+	// Check for GL 2.0 compatibility, if not bail out
+	if (!(glewIsSupported("GL_VERSION_2_0") && framebuffer_object_is_supported)) {
+		ERR_PRINT("Your system's graphic drivers seem not to support OpenGL 2.0 / GLES 2.0, sorry :(\n"
 				  "Try a drivers update, buy a new GPU or try software rendering on Linux; Godot is now going to terminate.");
-		OS::get_singleton()->alert("Your system's graphic drivers seem not to support OpenGL 2.1 / GLES 2.0, sorry :(\n"
+		OS::get_singleton()->alert("Your system's graphic drivers seem not to support OpenGL 2.0 / GLES 2.0, sorry :(\n"
 								   "Godot Engine will self-destruct as soon as you acknowledge this error message.",
 				"Fatal error: Insufficient OpenGL / GLES drivers");
 		exit(1);
