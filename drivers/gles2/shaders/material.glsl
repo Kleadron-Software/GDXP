@@ -657,6 +657,9 @@ uniform float shadow_darkening;
 #ifdef USE_SHADOW_FILTER_BILINEAR
 float SAMPLE_SHADOW_TEX_0_TO_1(vec2 p_uv,float p_depth) {
 
+	// offset to re-center the pixels compared to nearest neighbor
+	p_uv += shadow_texel_size / 2;
+	
 	vec2 unnormalized = p_uv / shadow_texel_size;
 	vec2 fractional = fract(unnormalized);
 	unnormalized = floor(unnormalized);
