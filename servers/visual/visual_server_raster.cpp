@@ -29,6 +29,7 @@
 /*************************************************************************/
 
 #include "visual_server_raster.h"
+#include "visual_server_light_culler.h"
 #include "globals.h"
 #include "io/marshalls.h"
 #include "os/os.h"
@@ -1901,6 +1902,11 @@ RID VisualServerRaster::scenario_create() {
 	scenario->octree.set_pair_callback(instance_pair, this);
 	scenario->octree.set_unpair_callback(instance_unpair, this);
 
+#ifdef TOOLS_ENABLED
+	light_culler->set_caster_culling_active(GLOBAL_DEF("render/caster_culling", true));
+	light_culler->set_light_culling_active(GLOBAL_DEF("render/light_culling", true));
+#endif
+
 	return scenario_rid;
 }
 
@@ -2228,7 +2234,23 @@ void VisualServerRaster::instance_set_layer_mask(RID p_instance, uint32_t p_mask
 	Instance *instance = instance_owner.get(p_instance);
 	ERR_FAIL_COND(!instance);
 
+	if (instance->layer_mask == p_mask) {
+		return;
+	}
+
 	instance->layer_mask = p_mask;
+
+	// update lights to show / hide shadows according to the new mask
+	if ((1 << instance->base_type) & VS::INSTANCE_GEOMETRY_MASK) {
+		if (instance->data.cast_shadows != VS::SHADOW_CASTING_SETTING_OFF) {
+			InstanceSet::Element *E = instance->lights.front();
+			while (E) {
+
+				E->get()->light_info->make_shadow_dirty();
+				E = E->next();
+			}
+		}
+	}
 }
 
 uint32_t VisualServerRaster::instance_get_layer_mask(RID p_instance) const {
@@ -2575,6 +2597,14 @@ void VisualServerRaster::instance_geometry_set_flag(RID p_instance, InstanceFlag
 				instance->data.cast_shadows = SHADOW_CASTING_SETTING_OFF;
 			}
 
+			//ability to cast shadows change, let lights now
+			InstanceSet::Element *E = instance->lights.front();
+			while (E) {
+
+				E->get()->light_info->make_shadow_dirty();
+				E = E->next();
+			}
+
 		} break;
 		case INSTANCE_FLAG_RECEIVE_SHADOWS: {
 
@@ -2651,6 +2681,14 @@ void VisualServerRaster::instance_geometry_set_cast_shadows_setting(RID p_instan
 	ERR_FAIL_COND(!instance);
 
 	instance->data.cast_shadows = p_shadow_casting_setting;
+
+	//ability to cast shadows change, let lights now
+	InstanceSet::Element *E = instance->lights.front();
+	while (E) {
+
+		E->get()->light_info->make_shadow_dirty();
+		E = E->next();
+	}
 }
 
 VS::ShadowCastingSetting VisualServerRaster::instance_geometry_get_cast_shadows_setting(RID p_instance) const {
@@ -2813,6 +2851,7 @@ void VisualServerRaster::_update_instance(Instance *p_instance) {
 		while (E) {
 
 			E->get()->version++;
+			E->get()->light_info->make_shadow_dirty();
 			E = E->next();
 		}
 
@@ -4532,6 +4571,15 @@ Vector<Plane> VisualServerRaster::_camera_generate_orthogonal_planes(Instance *p
 }
 void VisualServerRaster::_light_instance_update_pssm_shadow(Instance *p_light, Scenario *p_scenario, Camera *p_camera, const CullRange &p_cull_range) {
 
+	// Directional light always needs preparing as it takes a different path to other lights.
+	light_culler->prepare_light(p_light);
+
+	// Directional lights can always do a tighter cull.
+	// This should occur because shadow_dirty_count is never decremented for directional lights.
+#ifdef DEV_ENABLED
+	DEV_CHECK_ONCE(!light->is_shadow_update_full());
+#endif
+
 	int splits = rasterizer->light_instance_get_shadow_passes(p_light->light_info->instance);
 
 	float split_weight = rasterizer->light_directional_get_shadow_param(p_light->base_rid, LIGHT_DIRECTIONAL_SHADOW_PARAM_PSSM_SPLIT_WEIGHT);
@@ -4720,6 +4768,10 @@ void VisualServerRaster::_light_instance_update_pssm_shadow(Instance *p_light, S
 
 			rasterizer->light_instance_set_shadow_transform(p_light->light_info->instance, i, ortho_camera, ortho_transform, distances[i], distances[i + 1]);
 		}
+
+		// Do a secondary cull to remove casters that don't intersect with the camera frustum.
+		// Note this could possibly be done in a more efficient place if we can share the cull results for each split.
+		caster_cull_count = light_culler->cull(caster_cull_count, instance_shadow_cull_result);
 
 		rasterizer->begin_shadow_map(p_light->light_info->instance, i);
 
@@ -5125,10 +5177,12 @@ void VisualServerRaster::_light_instance_update_lispsm_shadow(Instance *p_light,
 
 #endif
 
-void VisualServerRaster::_light_instance_update_shadow(Instance *p_light, Scenario *p_scenario, Camera *p_camera, const CullRange &p_cull_range) {
+bool VisualServerRaster::_light_instance_update_shadow(Instance *p_light, Scenario *p_scenario, Camera *p_camera, const CullRange &p_cull_range) {
 
 	if (!rasterizer->shadow_allocate_near(p_light->light_info->instance))
-		return; // shadow could not be updated
+		return false; // shadow could not be updated
+
+	bool animated_material_found = false;
 
 	/* VisualServerRaster supports for many shadow techniques, using the one the rasterizer requests */
 
@@ -5152,6 +5206,11 @@ void VisualServerRaster::_light_instance_update_shadow(Instance *p_light, Scenar
 
 			Vector<Plane> planes = cm.get_projection_planes(p_light->data.transform);
 			int cull_count = p_scenario->octree.cull_convex(planes, instance_shadow_cull_result, MAX_INSTANCE_CULL, INSTANCE_GEOMETRY_MASK);
+
+			// Do a secondary cull to remove casters that don't intersect with the camera frustum.
+			if (!p_light->light_info->is_shadow_update_full()) {
+				cull_count = light_culler->cull(cull_count, instance_shadow_cull_result);
+			}
 
 			for (int i = 0; i < cull_count; i++) {
 
@@ -5191,6 +5250,11 @@ void VisualServerRaster::_light_instance_update_shadow(Instance *p_light, Scenar
 
 					int cull_count = p_scenario->octree.cull_convex(planes, instance_shadow_cull_result, MAX_INSTANCE_CULL, INSTANCE_GEOMETRY_MASK);
 
+					// Do a secondary cull to remove casters that don't intersect with the camera frustum.
+					if (!p_light->light_info->is_shadow_update_full()) {
+						cull_count = light_culler->cull(cull_count, instance_shadow_cull_result);
+					}
+
 					for (int j = 0; j < cull_count; j++) {
 
 						Instance *instance = instance_shadow_cull_result[j];
@@ -5227,6 +5291,8 @@ void VisualServerRaster::_light_instance_update_shadow(Instance *p_light, Scenar
 		default: {
 		}
 	}
+
+	return animated_material_found;
 }
 
 void VisualServerRaster::_portal_disconnect(Instance *p_portal, bool p_cleanup) {
@@ -5379,50 +5445,47 @@ void *VisualServerRaster::instance_pair(void *p_self, OctreeElementID, Instance 
 	Instance *A = p_A;
 	Instance *B = p_B;
 
-	if (A->base_type == INSTANCE_PORTAL) {
+	//instance indices are designed so greater always contains lesser
+	if (A->base_type > B->base_type) {
+		SWAP(A, B); //lesser always first
+	}
 
-		ERR_FAIL_COND_V(B->base_type != INSTANCE_PORTAL, NULL);
+	if (B->base_type == INSTANCE_PORTAL && A->base_type == INSTANCE_PORTAL) {
+		// A = Portal
+		// B = Portal
 
 		A->portal_info->candidate_set.insert(B);
 		B->portal_info->candidate_set.insert(A);
 
-		self->_portal_attempt_connect(A);
-		//attempt to conncet portal A (will go through B anyway)
+		self->_portal_attempt_connect(B);
+		//attempt to conncet portal B (will go through A anyway)
 		//this is a little hackish, but works fine in practice
 
-	} else if (A->base_type == INSTANCE_BAKED_LIGHT || B->base_type == INSTANCE_BAKED_LIGHT) {
+	} else if (B->base_type == INSTANCE_BAKED_LIGHT && A->base_type == INSTANCE_BAKED_LIGHT_SAMPLER) {
+		// A = BakedLightSampler
+		// B = BakedLight
 
-		if (B->base_type == INSTANCE_BAKED_LIGHT) {
-			SWAP(A, B);
+		A->baked_light_sampler_info->baked_lights.insert(B);
+
+	} else if (B->base_type == INSTANCE_ROOM && ((1 << A->base_type) & VS::INSTANCE_GEOMETRY_MASK)) {
+		// A = Geometry
+		// B = Room
+
+		A->auto_rooms.insert(B);
+		B->room_info->owned_autoroom_geometry.insert(A);
+
+		self->_instance_validate_autorooms(A);
+
+	} else if (B->base_type == INSTANCE_LIGHT && ((1 << A->base_type) & VS::INSTANCE_GEOMETRY_MASK)) {
+		// A = Geometry
+		// B = Light
+		B->light_info->affected.insert(A);
+		A->lights.insert(B);
+		A->light_cache_dirty = true;
+
+		if (A->data.cast_shadows != VS::SHADOW_CASTING_SETTING_OFF) {
+			B->light_info->make_shadow_dirty();
 		}
-
-		ERR_FAIL_COND_V(B->base_type != INSTANCE_BAKED_LIGHT_SAMPLER, NULL);
-		B->baked_light_sampler_info->baked_lights.insert(A);
-
-	} else if (A->base_type == INSTANCE_ROOM || B->base_type == INSTANCE_ROOM) {
-
-		if (B->base_type == INSTANCE_ROOM)
-			SWAP(A, B);
-
-		ERR_FAIL_COND_V(!((1 << B->base_type) & INSTANCE_GEOMETRY_MASK), NULL);
-
-		B->auto_rooms.insert(A);
-		A->room_info->owned_autoroom_geometry.insert(B);
-
-		self->_instance_validate_autorooms(B);
-
-	} else {
-
-		if (B->base_type == INSTANCE_LIGHT) {
-
-			SWAP(A, B);
-		} else if (A->base_type != INSTANCE_LIGHT) {
-			return NULL;
-		}
-
-		A->light_info->affected.insert(B);
-		B->lights.insert(A);
-		B->light_cache_dirty = true;
 	}
 
 	return NULL;
@@ -5433,9 +5496,15 @@ void VisualServerRaster::instance_unpair(void *p_self, OctreeElementID, Instance
 	Instance *A = p_A;
 	Instance *B = p_B;
 
-	if (A->base_type == INSTANCE_PORTAL) {
+	//instance indices are designed so greater always contains lesser
+	if (A->base_type > B->base_type) {
+		SWAP(A, B); //lesser always first
+	}
 
-		ERR_FAIL_COND(B->base_type != INSTANCE_PORTAL);
+	if (B->base_type == INSTANCE_PORTAL && A->base_type == INSTANCE_PORTAL) {
+		// A = Portal
+		// B = Portal
+		// order doesn't really matter here
 
 		A->portal_info->candidate_set.erase(B);
 		B->portal_info->candidate_set.erase(A);
@@ -5444,38 +5513,32 @@ void VisualServerRaster::instance_unpair(void *p_self, OctreeElementID, Instance
 		self->_portal_attempt_connect(A);
 		self->_portal_attempt_connect(B);
 
-	} else if (A->base_type == INSTANCE_BAKED_LIGHT || B->base_type == INSTANCE_BAKED_LIGHT) {
+	} else if (B->base_type == INSTANCE_BAKED_LIGHT && A->base_type == INSTANCE_BAKED_LIGHT_SAMPLER) {
+		// A = BakedLightSampler
+		// B = BakedLight
 
-		if (B->base_type == INSTANCE_BAKED_LIGHT) {
-			SWAP(A, B);
+		A->baked_light_sampler_info->baked_lights.erase(B);
+
+	} else if (B->base_type == INSTANCE_ROOM && ((1 << A->base_type) & VS::INSTANCE_GEOMETRY_MASK)) {
+		// A = Geometry
+		// B = Room
+
+		A->auto_rooms.erase(B);
+		A->valid_auto_rooms.erase(B);
+		B->room_info->owned_autoroom_geometry.erase(A);
+
+	}
+	else if (B->base_type == INSTANCE_LIGHT && ((1 << A->base_type) & VS::INSTANCE_GEOMETRY_MASK)) {
+		// A = Geometry
+		// B = Light
+
+		B->light_info->affected.erase(A);
+		A->lights.erase(B);
+		A->light_cache_dirty = true;
+
+		if (A->data.cast_shadows != VS::SHADOW_CASTING_SETTING_OFF) {
+			B->light_info->make_shadow_dirty();
 		}
-
-		ERR_FAIL_COND(B->base_type != INSTANCE_BAKED_LIGHT_SAMPLER);
-		B->baked_light_sampler_info->baked_lights.erase(A);
-
-	} else if (A->base_type == INSTANCE_ROOM || B->base_type == INSTANCE_ROOM) {
-
-		if (B->base_type == INSTANCE_ROOM)
-			SWAP(A, B);
-
-		ERR_FAIL_COND(!((1 << B->base_type) & INSTANCE_GEOMETRY_MASK));
-
-		B->auto_rooms.erase(A);
-		B->valid_auto_rooms.erase(A);
-		A->room_info->owned_autoroom_geometry.erase(B);
-
-	} else {
-
-		if (B->base_type == INSTANCE_LIGHT) {
-
-			SWAP(A, B);
-		} else if (A->base_type != INSTANCE_LIGHT) {
-			return;
-		}
-
-		A->light_info->affected.erase(B);
-		B->lights.erase(A);
-		B->light_cache_dirty = true;
 	}
 }
 
@@ -5951,6 +6014,9 @@ void VisualServerRaster::_render_camera(Viewport *p_viewport, Camera *p_camera, 
 
 	rasterizer->set_camera(p_camera->transform, camera_matrix, ortho);
 
+	// Prepare the light - camera volume culling system.
+	light_culler->prepare_camera(p_camera->transform, camera_matrix);
+
 	Vector<Plane> planes = camera_matrix.get_projection_planes(p_camera->transform);
 
 	CullRange cull_range; // cull range is used for PSSM, and having an idea of the rendering depth
@@ -6209,6 +6275,7 @@ void VisualServerRaster::_render_camera(Viewport *p_viewport, Camera *p_camera, 
 		//assign shadows by distance to camera
 		SortArray<Instance *, _InstanceLightsort> sorter;
 		sorter.sort(light_cull_result, light_cull_count);
+		uint32_t frames_drawn = OS::get_singleton()->get_frames_drawn();
 		for (int i = 0; i < light_cull_count; i++) {
 
 			Instance *ins = light_cull_result[i];
@@ -6216,13 +6283,44 @@ void VisualServerRaster::_render_camera(Viewport *p_viewport, Camera *p_camera, 
 			if (!rasterizer->light_has_shadow(ins->base_rid) || !shadows_enabled)
 				continue;
 
+			Instance::LightInfo *light_info = ins->light_info;
+
 			/* for far shadows?
 			if (ins->version == ins->light_info->last_version && rasterizer->light_instance_has_far_shadow(ins->light_info->instance))
 				continue; // didn't change
 			*/
 
-			_light_instance_update_shadow(ins, p_scenario, p_camera, cull_range);
-			ins->light_info->last_version = ins->version;
+			// We can detect whether multiple cameras are hitting this light, whether or not the shadow is dirty,
+			// so that we can turn off tighter caster culling.
+			light_info->detect_light_intersects_multiple_cameras(frames_drawn);
+
+			if (light_info->is_shadow_dirty()) {
+				// Dirty shadows have no need to be drawn if
+				// the light volume doesn't intersect the camera frustum.
+
+				// Returns false if the entire light can be culled.
+				bool allow_redraw = light_culler->prepare_light(ins);
+
+				// Directional lights aren't handled here, _light_instance_update_shadow is called from elsewhere.
+				// Checking for this in case this changes, as this is assumed.
+				//DEV_CHECK_ONCE(VSG::storage->light_get_type(ins->base_rid) != VS::LIGHT_DIRECTIONAL);
+
+				// Tighter caster culling to the camera frustum should work correctly with multiple viewports + cameras.
+				// The first camera will cull tightly, but if the light is present on more than 1 camera, the second will
+				// do a full render, and mark the light as non-dirty.
+				// There is however a cost to tighter shadow culling in this situation (2 shadow updates in 1 frame),
+				// so we should detect this and switch off tighter caster culling automatically.
+				// This is done in the logic for `decrement_shadow_dirty()`.
+				if (allow_redraw) {
+					light_info->last_version++;
+					light_info->decrement_shadow_dirty();
+				}
+			}
+
+			if (_light_instance_update_shadow(ins, p_scenario, p_camera, cull_range)) {
+				// If the light requests another update (animated material?)...
+				light_info->last_version = ins->version;
+			}
 		}
 	}
 
@@ -7108,7 +7206,15 @@ VisualServerRaster::VisualServerRaster(Rasterizer *p_rasterizer) {
 	clear_color = Color(0.3, 0.3, 0.3, 1.0);
 	OctreeAllocator::allocator = &octree_allocator;
 	draw_extra_frame = false;
+
+	light_culler = memnew(VisualServerLightCuller);
+	light_culler->set_caster_culling_active(GLOBAL_DEF("render/caster_culling", true));
+	light_culler->set_light_culling_active(GLOBAL_DEF("render/light_culling", true));
 }
 
 VisualServerRaster::~VisualServerRaster() {
+	if (light_culler) {
+		memdelete(light_culler);
+		light_culler = nullptr;
+	}
 }

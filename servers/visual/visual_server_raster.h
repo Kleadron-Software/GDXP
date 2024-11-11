@@ -40,6 +40,8 @@
 	@author Juan Linietsky <reduzio@gmail.com>
 */
 
+class VisualServerLightCuller;
+
 class VisualServerRaster : public VisualServer {
 
 	enum {
@@ -142,7 +144,9 @@ class VisualServerRaster : public VisualServer {
 		}
 	};
 
+public:
 	struct Instance;
+
 	typedef Set<Instance *, Comparator<Instance *>, OctreeAllocator> InstanceSet;
 	struct Scenario;
 
@@ -234,7 +238,55 @@ class VisualServerRaster : public VisualServer {
 			bool enabled;
 			float dtc; //distance to camera, used for sorting
 
+		private:
+			// Instead of a single dirty flag, we maintain a count
+			// so that we can detect lights that are being made dirty
+			// each frame, and switch on tighter caster culling.
+			int32_t shadow_dirty_count;
+
+			uint32_t light_update_frame_id;
+			bool light_intersects_multiple_cameras;
+			uint32_t light_intersects_multiple_cameras_timeout_frame_id;
+
+		public:
+			bool is_shadow_dirty() const { return shadow_dirty_count != 0; }
+			void make_shadow_dirty() { shadow_dirty_count = light_intersects_multiple_cameras ? 1 : 2; }
+			void detect_light_intersects_multiple_cameras(uint32_t p_frame_id) {
+				// We need to detect the case where shadow updates are occurring
+				// more than once per frame. In this case, we need to turn off
+				// tighter caster culling, so situation reverts to one full shadow update
+				// per frame (light_intersects_multiple_cameras is set).
+				if (p_frame_id == light_update_frame_id) {
+					light_intersects_multiple_cameras = true;
+					light_intersects_multiple_cameras_timeout_frame_id = p_frame_id + 60;
+				}
+				else {
+					// When shadow_volume_intersects_multiple_cameras is set, we
+					// want to detect the situation this is no longer the case, via a timeout.
+					// The system can go back to tighter caster culling in this situation.
+					// Having a long-ish timeout prevents rapid cycling.
+					if (light_intersects_multiple_cameras && (p_frame_id >= light_intersects_multiple_cameras_timeout_frame_id)) {
+						light_intersects_multiple_cameras = false;
+						light_intersects_multiple_cameras_timeout_frame_id = -1;
+					}
+				}
+				light_update_frame_id = p_frame_id;
+			}
+
+			void decrement_shadow_dirty() {
+				shadow_dirty_count--;
+				//DEV_ASSERT(shadow_dirty_count >= 0);
+			}
+
+			// Shadow updates can either full (everything in the shadow volume)
+			// or closely culled to the camera frustum.
+			bool is_shadow_update_full() const { return shadow_dirty_count == 0; }
+
 			LightInfo() {
+				shadow_dirty_count = 1;
+				light_update_frame_id = -1;
+				light_intersects_multiple_cameras_timeout_frame_id = -1;
+				light_intersects_multiple_cameras = false;
 
 				D = NULL;
 				light_set_index = -1;
@@ -362,6 +414,7 @@ class VisualServerRaster : public VisualServer {
 		}
 	};
 
+private:
 	mutable RID_Owner<Rasterizer::CanvasItemMaterial> canvas_item_material_owner;
 
 	struct CanvasItem : public Rasterizer::CanvasItem {
@@ -603,6 +656,8 @@ class VisualServerRaster : public VisualServer {
 
 	RID test_cube;
 
+	VisualServerLightCuller *light_culler;
+
 	mutable RID_Owner<Room> room_owner;
 	mutable RID_Owner<Portal> portal_owner;
 
@@ -643,7 +698,7 @@ class VisualServerRaster : public VisualServer {
 	void _light_instance_update_lispsm_shadow(Instance *p_light, Scenario *p_scenario, Camera *p_camera, const CullRange &p_cull_range);
 	void _light_instance_update_pssm_shadow(Instance *p_light, Scenario *p_scenario, Camera *p_camera, const CullRange &p_cull_range);
 
-	void _light_instance_update_shadow(Instance *p_light, Scenario *p_scenario, Camera *p_camera, const CullRange &p_cull_range);
+	bool _light_instance_update_shadow(Instance *p_light, Scenario *p_scenario, Camera *p_camera, const CullRange &p_cull_range);
 
 	uint64_t render_pass;
 	int changes;
