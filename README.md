@@ -6,7 +6,7 @@ GDXP is a fork of Godot 2.1.7 RC that targets legacy Windows for fun, and implem
 **GDXP is unofficial and not affiliated with the Godot project.**  
 If you're looking for the regular version of Godot, you can find it here: https://godotengine.org
 
-The target is currently just 32-bit Windows XP, but the GLES1 rasterizer should be portable to other platforms that implement OpenGL.
+The lowest platform target is currently 32-bit Windows XP, but the GLES1 rasterizer should be portable to other platforms that implement OpenGL.
 I only develop on Windows, so I have not explored other platforms.  
 "GDXP" is kind of a temporary name but I have nothing better.
 
@@ -16,25 +16,22 @@ You can check what I've done so far and what I have in mind here:
 
 #### Can I use this to load existing games?
 
-This version of Godot is not intended as a drop-in replacement for Godot 2 games, and is an enthusiast version made for my own purposes.
-I may add, change, or remove features as intended for my own use.  
-The GLES1 rasterizer has fundamental differences from the GLES2 rasterizer.
-Existing games made for Godot 2 target the GLES2 renderer, but this fork uses the GLES1 renderer by default for compatibility reasons.  
+This version of Godot is not intended as an engine replacement for existing Godot 2 games, and is an enthusiast version made for my own purposes.
+There are changes backported from Godot 3 and 4 that fundamentally make this version incompatible with unmodified Godot 2 projects.  
+
+Existing games target the GLES2 renderer, but this fork uses the GLES1 renderer by default for compatibility reasons.  
 If you load a GD2 project in this, it might not look correct without tweaking the video driver setting.  
-This engine also has fundamental backwards incompatible changes made to it since Godot 2.1.
 
-#### Should I use this over modern Godot?
+#### Should I use this over regular/modern Godot?
 
-Unless your target is legacy PCs, you shouldn't. This fork isn't intended to replace modern Godot versions.
-Instead, my intention is to make game development on legacy/retro platforms more bearable.
-Basing this engine on an older, simpler, and more compatible version of Godot was better in every way than making my own entirely new engine from scratch.
+No, you shouldn't.  
+As stated above, this is my own enthusiast version of the engine. I currently do not have any documentation set up aside from documented changes.  
+The source code of this project is available publicly as I do not see a benefit in keeping it closed-source.  
 
-If you're looking to make a retro style video game, you can do that just fine with any newer engine if you wrangle the shaders.
-If you're the retro PC enthusiast type that's willing to put up with an old version of Godot despite its quirks, 
-because you want your game to run on hardware it looks like it should, this version would be better than using Godot 1 or 2 directly.
+I don't mind it if someone wants to use this version, as long as you understand what you're getting, but you'll get way better support if you use a newer Godot version like 3.x or 4.x.
 
-Keep in mind that Godot 2 was built from already outdated technology, and the workflow isn't the same as a modern engine.
-You may need to optimize your games well if you intend to build anything substantial.
+Keep in mind that Godot 2 was built from already outdated technology, and the workflow isn't the same as a modern engine.  
+I backport some optimizations I can, if applicable, but optimization still needs to be taken into account.
 
 #### Important Notes
 
