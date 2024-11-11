@@ -845,6 +845,16 @@ float VisualServerRaster::light_directional_get_shadow_param(RID p_light, LightD
 	return rasterizer->light_directional_get_shadow_param(p_light, p_param);
 }
 
+void VisualServerRaster::light_directional_set_shadow_depth_range_mode(RID p_light, LightDirectionalShadowDepthRangeMode p_range_mode) {
+	VS_CHANGED;
+	rasterizer->light_directional_set_shadow_depth_range_mode(p_light, p_range_mode);
+}
+
+VS::LightDirectionalShadowDepthRangeMode VisualServerRaster::light_directional_get_shadow_depth_range_mode(RID p_light) const {
+
+	return rasterizer->light_directional_get_shadow_depth_range_mode(p_light);
+}
+
 RID VisualServerRaster::skeleton_create() {
 
 	return rasterizer->skeleton_create();
@@ -4569,7 +4579,7 @@ Vector<Plane> VisualServerRaster::_camera_generate_orthogonal_planes(Instance *p
 
 	return light_frustum_planes;
 }
-void VisualServerRaster::_light_instance_update_pssm_shadow(Instance *p_light, Scenario *p_scenario, Camera *p_camera, const CullRange &p_cull_range) {
+void VisualServerRaster::_light_instance_update_pssm_shadow(Instance *p_light, Scenario *p_scenario, Camera *p_camera, const CullRange &p_cull_range, const Transform p_cam_transform, const CameraMatrix &p_cam_projection) {
 
 	// Directional light always needs preparing as it takes a different path to other lights.
 	light_culler->prepare_light(p_light);
@@ -4603,6 +4613,52 @@ void VisualServerRaster::_light_instance_update_pssm_shadow(Instance *p_light, S
 		float lg = cull_min * Math::pow(cull_max / cull_min, idm);
 		float uniform = cull_min + (cull_max - cull_min) * idm;
 		distances[i] = lg * split_weight + uniform * (1.0 - split_weight);
+	}
+
+	VS::LightDirectionalShadowDepthRangeMode depth_range_mode = rasterizer->light_directional_get_shadow_depth_range_mode(p_light->base_rid);
+
+	if (depth_range_mode == VS::LIGHT_DIRECTIONAL_SHADOW_DEPTH_RANGE_OPTIMIZED) {
+		//optimize min/max
+		Vector<Plane> planes = p_cam_projection.get_projection_planes(p_cam_transform);
+		int cull_count = p_scenario->octree.cull_convex(planes, instance_shadow_cull_result, MAX_INSTANCE_CULL, VS::INSTANCE_GEOMETRY_MASK);
+		Plane base(p_cam_transform.origin, -p_cam_transform.basis.get_axis(2));
+		//check distance max and min
+
+		bool found_items = false;
+		float z_max = -1e20;
+		float z_min = 1e20;
+
+		for (int i = 0; i < cull_count; i++) {
+			Instance *instance = instance_shadow_cull_result[i];
+			if (!instance->visible ||
+				!((1 << instance->base_type) & VS::INSTANCE_GEOMETRY_MASK) ||
+				(instance->data.cast_shadows == SHADOW_CASTING_SETTING_OFF)) {// ||
+				//!(p_visible_layers & instance->layer_mask)) {
+				continue;
+			}
+
+			//if (static_cast<InstanceGeometryData *>(instance->base_data)->material_is_animated) {
+			//	animated_material_found = true;
+			//}
+
+			float max, min;
+			instance->transformed_aabb.project_range_in_plane(base, min, max);
+
+			if (max > z_max) {
+				z_max = max;
+			}
+
+			if (min < z_min) {
+				z_min = min;
+			}
+
+			found_items = true;
+		}
+
+		if (found_items) {
+			cull_min = MAX(cull_min, z_min);
+			cull_max = MIN(cull_max, z_max);
+		}
 	}
 
 	distances[0] = cull_min;
@@ -5177,7 +5233,7 @@ void VisualServerRaster::_light_instance_update_lispsm_shadow(Instance *p_light,
 
 #endif
 
-bool VisualServerRaster::_light_instance_update_shadow(Instance *p_light, Scenario *p_scenario, Camera *p_camera, const CullRange &p_cull_range) {
+bool VisualServerRaster::_light_instance_update_shadow(Instance *p_light, Scenario *p_scenario, Camera *p_camera, const CullRange &p_cull_range, const Transform p_cam_transform, const CameraMatrix &p_cam_projection) {
 
 	if (!rasterizer->shadow_allocate_near(p_light->light_info->instance))
 		return false; // shadow could not be updated
@@ -5277,11 +5333,11 @@ bool VisualServerRaster::_light_instance_update_shadow(Instance *p_light, Scenar
 		} break;
 		case Rasterizer::SHADOW_ORTHOGONAL: {
 
-			_light_instance_update_pssm_shadow(p_light, p_scenario, p_camera, p_cull_range);
+			_light_instance_update_pssm_shadow(p_light, p_scenario, p_camera, p_cull_range, p_cam_transform, p_cam_projection);
 		} break;
 		case Rasterizer::SHADOW_PSSM: {
 
-			_light_instance_update_pssm_shadow(p_light, p_scenario, p_camera, p_cull_range);
+			_light_instance_update_pssm_shadow(p_light, p_scenario, p_camera, p_cull_range, p_cam_transform, p_cam_projection);
 		} break;
 		case Rasterizer::SHADOW_PSM: {
 
@@ -6231,7 +6287,7 @@ void VisualServerRaster::_render_camera(Viewport *p_viewport, Camera *p_camera, 
 
 			if (light && light->light_info->enabled && rasterizer->light_has_shadow(light->base_rid)) {
 				//rasterizer->light_instance_set_active_hint(light->light_info->instance);
-				_light_instance_update_shadow(light, p_scenario, p_camera, cull_range);
+				_light_instance_update_shadow(light, p_scenario, p_camera, cull_range, p_camera->transform, camera_matrix);
 			}
 
 			E = E->next();
@@ -6317,7 +6373,7 @@ void VisualServerRaster::_render_camera(Viewport *p_viewport, Camera *p_camera, 
 				}
 			}
 
-			if (_light_instance_update_shadow(ins, p_scenario, p_camera, cull_range)) {
+			if (_light_instance_update_shadow(ins, p_scenario, p_camera, cull_range, p_camera->transform, camera_matrix)) {
 				// If the light requests another update (animated material?)...
 				light_info->last_version = ins->version;
 			}

@@ -2904,6 +2904,16 @@ float RasterizerGLES1::light_directional_get_shadow_param(RID p_light,VS::LightD
 	return 0;
 }
 
+void RasterizerGLES1::light_directional_set_shadow_depth_range_mode(RID p_light, VS::LightDirectionalShadowDepthRangeMode p_range_mode) {
+
+	
+}
+
+VS::LightDirectionalShadowDepthRangeMode RasterizerGLES1::light_directional_get_shadow_depth_range_mode(RID p_light) const {
+
+	return VS::LIGHT_DIRECTIONAL_SHADOW_DEPTH_RANGE_STABLE;
+}
+
 
 AABB RasterizerGLES1::light_get_aabb(RID p_light) const {
 

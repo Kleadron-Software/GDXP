@@ -696,9 +696,9 @@ private:
 	Vector<Plane> _camera_generate_orthogonal_planes(Instance *p_light, Camera *p_camera, float p_range_min, float p_range_max);
 
 	void _light_instance_update_lispsm_shadow(Instance *p_light, Scenario *p_scenario, Camera *p_camera, const CullRange &p_cull_range);
-	void _light_instance_update_pssm_shadow(Instance *p_light, Scenario *p_scenario, Camera *p_camera, const CullRange &p_cull_range);
+	void _light_instance_update_pssm_shadow(Instance *p_light, Scenario *p_scenario, Camera *p_camera, const CullRange &p_cull_range, const Transform p_cam_transform, const CameraMatrix &p_cam_projection);
 
-	bool _light_instance_update_shadow(Instance *p_light, Scenario *p_scenario, Camera *p_camera, const CullRange &p_cull_range);
+	bool _light_instance_update_shadow(Instance *p_light, Scenario *p_scenario, Camera *p_camera, const CullRange &p_cull_range, const Transform p_cam_transform, const CameraMatrix &p_cam_projection);
 
 	uint64_t render_pass;
 	int changes;
@@ -949,6 +949,9 @@ public:
 	virtual LightDirectionalShadowMode light_directional_get_shadow_mode(RID p_light) const;
 	virtual void light_directional_set_shadow_param(RID p_light, LightDirectionalShadowParam p_param, float p_value);
 	virtual float light_directional_get_shadow_param(RID p_light, LightDirectionalShadowParam p_param) const;
+
+	virtual void light_directional_set_shadow_depth_range_mode(RID p_light, LightDirectionalShadowDepthRangeMode p_range_mode);
+	virtual LightDirectionalShadowDepthRangeMode light_directional_get_shadow_depth_range_mode(RID p_light) const;
 
 	/* SKELETON API */
 

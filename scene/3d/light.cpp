@@ -578,6 +578,15 @@ float DirectionalLight::get_shadow_param(ShadowParam p_param) const {
 	return shadow_param[p_param];
 }
 
+void DirectionalLight::set_shadow_depth_range(ShadowDepthRange p_range) {
+	shadow_depth_range = p_range;
+	VS::get_singleton()->light_directional_set_shadow_depth_range_mode(light, VS::LightDirectionalShadowDepthRangeMode(p_range));
+}
+
+DirectionalLight::ShadowDepthRange DirectionalLight::get_shadow_depth_range() const {
+	return shadow_depth_range;
+}
+
 void DirectionalLight::_bind_methods() {
 
 	ObjectTypeDB::bind_method(_MD("set_shadow_mode", "mode"), &DirectionalLight::set_shadow_mode);
@@ -585,10 +594,14 @@ void DirectionalLight::_bind_methods() {
 	ObjectTypeDB::bind_method(_MD("set_shadow_param", "param", "value"), &DirectionalLight::set_shadow_param);
 	ObjectTypeDB::bind_method(_MD("get_shadow_param", "param"), &DirectionalLight::get_shadow_param);
 
+	ObjectTypeDB::bind_method(_MD("set_shadow_depth_range", "mode"), &DirectionalLight::set_shadow_depth_range);
+	ObjectTypeDB::bind_method(_MD("get_shadow_depth_range"), &DirectionalLight::get_shadow_depth_range);
+
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "shadow/mode", PROPERTY_HINT_ENUM, "Orthogonal,Perspective,PSSM 2 Splits,PSSM 4 Splits"), _SCS("set_shadow_mode"), _SCS("get_shadow_mode"));
 	ADD_PROPERTYI(PropertyInfo(Variant::REAL, "shadow/max_distance", PROPERTY_HINT_EXP_RANGE, "0.00,99999,0.01"), _SCS("set_shadow_param"), _SCS("get_shadow_param"), SHADOW_PARAM_MAX_DISTANCE);
 	ADD_PROPERTYI(PropertyInfo(Variant::REAL, "shadow/split_weight", PROPERTY_HINT_RANGE, "0.01,1.0,0.01"), _SCS("set_shadow_param"), _SCS("get_shadow_param"), SHADOW_PARAM_PSSM_SPLIT_WEIGHT);
 	ADD_PROPERTYI(PropertyInfo(Variant::REAL, "shadow/zoffset_scale", PROPERTY_HINT_RANGE, "0.01,1024.0,0.01"), _SCS("set_shadow_param"), _SCS("get_shadow_param"), SHADOW_PARAM_PSSM_ZOFFSET_SCALE);
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "shadow/depth_range", PROPERTY_HINT_ENUM, "Stable,Optimized"), _SCS("set_shadow_depth_range"), _SCS("get_shadow_depth_range"));
 
 	BIND_CONSTANT(SHADOW_ORTHOGONAL);
 	BIND_CONSTANT(SHADOW_PERSPECTIVE);
@@ -597,6 +610,8 @@ void DirectionalLight::_bind_methods() {
 	BIND_CONSTANT(SHADOW_PARAM_MAX_DISTANCE);
 	BIND_CONSTANT(SHADOW_PARAM_PSSM_SPLIT_WEIGHT);
 	BIND_CONSTANT(SHADOW_PARAM_PSSM_ZOFFSET_SCALE);
+	BIND_CONSTANT(SHADOW_DEPTH_RANGE_STABLE);
+	BIND_CONSTANT(SHADOW_DEPTH_RANGE_OPTIMIZED);
 }
 
 DirectionalLight::DirectionalLight() :
@@ -606,6 +621,7 @@ DirectionalLight::DirectionalLight() :
 	shadow_param[SHADOW_PARAM_MAX_DISTANCE] = 0;
 	shadow_param[SHADOW_PARAM_PSSM_SPLIT_WEIGHT] = 0.5;
 	shadow_param[SHADOW_PARAM_PSSM_ZOFFSET_SCALE] = 2.0;
+	shadow_depth_range = SHADOW_DEPTH_RANGE_STABLE;
 }
 
 void OmniLight::_bind_methods() {

@@ -3577,6 +3577,21 @@ float RasterizerGLES2::light_directional_get_shadow_param(RID p_light, VS::Light
 	return light->directional_shadow_param[p_param];
 }
 
+void RasterizerGLES2::light_directional_set_shadow_depth_range_mode(RID p_light, VS::LightDirectionalShadowDepthRangeMode p_range_mode) {
+
+	Light *light = light_owner.get(p_light);
+	ERR_FAIL_COND(!light);
+
+	light->directional_shadow_depth_range_mode = p_range_mode;
+}
+
+VS::LightDirectionalShadowDepthRangeMode RasterizerGLES2::light_directional_get_shadow_depth_range_mode(RID p_light) const {
+
+	const Light *light = light_owner.get(p_light);
+	ERR_FAIL_COND_V(!light, VS::LIGHT_DIRECTIONAL_SHADOW_DEPTH_RANGE_STABLE);
+	return light->directional_shadow_depth_range_mode;
+}
+
 AABB RasterizerGLES2::light_get_aabb(RID p_light) const {
 
 	Light *light = light_owner.get(p_light);

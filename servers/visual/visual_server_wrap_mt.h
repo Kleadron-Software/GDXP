@@ -328,6 +328,8 @@ public:
 	FUNC1RC(LightDirectionalShadowMode, light_directional_get_shadow_mode, RID);
 	FUNC3(light_directional_set_shadow_param, RID, LightDirectionalShadowParam, float);
 	FUNC2RC(float, light_directional_get_shadow_param, RID, LightDirectionalShadowParam);
+	FUNC2(light_directional_set_shadow_depth_range_mode, RID, LightDirectionalShadowDepthRangeMode);
+	FUNC1RC(LightDirectionalShadowDepthRangeMode, light_directional_get_shadow_depth_range_mode, RID);
 
 	/* SKELETON API */
 

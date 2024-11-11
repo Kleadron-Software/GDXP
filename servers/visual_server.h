@@ -555,6 +555,14 @@ public:
 	virtual void light_directional_set_shadow_param(RID p_light, LightDirectionalShadowParam p_param, float p_value) = 0;
 	virtual float light_directional_get_shadow_param(RID p_light, LightDirectionalShadowParam p_param) const = 0;
 
+	enum LightDirectionalShadowDepthRangeMode {
+		LIGHT_DIRECTIONAL_SHADOW_DEPTH_RANGE_STABLE,
+		LIGHT_DIRECTIONAL_SHADOW_DEPTH_RANGE_OPTIMIZED,
+	};
+
+	virtual void light_directional_set_shadow_depth_range_mode(RID p_light, LightDirectionalShadowDepthRangeMode p_range_mode) = 0;
+	virtual LightDirectionalShadowDepthRangeMode light_directional_get_shadow_depth_range_mode(RID p_light) const = 0;
+
 	//@TODO fallof model and all that stuff
 
 	/* SKELETON API */

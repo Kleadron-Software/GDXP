@@ -430,6 +430,8 @@ public:
 	virtual VS::LightDirectionalShadowMode light_directional_get_shadow_mode(RID p_light) const = 0;
 	virtual void light_directional_set_shadow_param(RID p_light, VS::LightDirectionalShadowParam p_param, float p_value) = 0;
 	virtual float light_directional_get_shadow_param(RID p_light, VS::LightDirectionalShadowParam p_param) const = 0;
+	virtual void light_directional_set_shadow_depth_range_mode(RID p_light, VS::LightDirectionalShadowDepthRangeMode p_range_mode) = 0;
+	virtual VS::LightDirectionalShadowDepthRangeMode light_directional_get_shadow_depth_range_mode(RID p_light) const = 0;
 
 	virtual AABB light_get_aabb(RID p_poly) const = 0;
 

@@ -163,9 +163,15 @@ public:
 		SHADOW_PARAM_PSSM_ZOFFSET_SCALE
 	};
 
+	enum ShadowDepthRange {
+		SHADOW_DEPTH_RANGE_STABLE = VS::LIGHT_DIRECTIONAL_SHADOW_DEPTH_RANGE_STABLE,
+		SHADOW_DEPTH_RANGE_OPTIMIZED = VS::LIGHT_DIRECTIONAL_SHADOW_DEPTH_RANGE_OPTIMIZED,
+	};
+
 private:
 	ShadowMode shadow_mode;
 	float shadow_param[3];
+	ShadowDepthRange shadow_depth_range;
 
 protected:
 	static void _bind_methods();
@@ -179,11 +185,15 @@ public:
 	void set_shadow_param(ShadowParam p_param, float p_value);
 	float get_shadow_param(ShadowParam p_param) const;
 
+	void set_shadow_depth_range(ShadowDepthRange p_range);
+	ShadowDepthRange get_shadow_depth_range() const;
+
 	DirectionalLight();
 };
 
 VARIANT_ENUM_CAST(DirectionalLight::ShadowMode);
 VARIANT_ENUM_CAST(DirectionalLight::ShadowParam);
+VARIANT_ENUM_CAST(DirectionalLight::ShadowDepthRange);
 
 class OmniLight : public Light {
 
