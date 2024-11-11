@@ -157,7 +157,7 @@ struct Vector2 {
 	Vector2 snapped(const Vector2 &p_by) const;
 	float get_aspect() const { return width / height; }
 
-	operator String() const { return String::num(x) + ", " + String::num(y); }
+	operator String() const { return String::num_real(x, true) + ", " + String::num_real(y, true); }
 
 	_FORCE_INLINE_ Vector2(float p_x, float p_y) {
 		x = p_x;
@@ -374,7 +374,7 @@ struct Rect2 {
 		size = end - begin;
 	}
 
-	operator String() const { return String(pos) + ", " + String(size); }
+	operator String() const { return pos.operator String() + ", " + size.operator String(); }
 
 	Rect2() {}
 	Rect2(float p_x, float p_y, float p_width, float p_height) {
@@ -431,7 +431,7 @@ struct Point2i {
 
 	float get_aspect() const { return width / (float)height; }
 
-	operator String() const { return String::num(x) + ", " + String::num(y); }
+	operator String() const { return String::num_int64(x) + ", " + String::num_int64(y); }
 
 	operator Vector2() const { return Vector2(x, y); }
 	inline Point2i(const Vector2 &p_vec2) {

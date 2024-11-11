@@ -163,5 +163,5 @@ bool Plane::is_almost_like(const Plane &p_plane) const {
 
 Plane::operator String() const {
 
-	return normal.operator String() + ", " + rtos(d);
+	return normal.operator String() + ", " + String::num_real(d, false);
 }

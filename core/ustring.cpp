@@ -879,7 +879,7 @@ String String::num(double p_num, int p_decimals) {
 #endif
 
 	buf[255] = 0;
-	//destroy trailing zeroes
+	// Destroy trailing zeroes, except one after period.
 	{
 
 		bool period = false;
@@ -899,7 +899,7 @@ String String::num(double p_num, int p_decimals) {
 					buf[z] = 0;
 				} else if (buf[z] == '.') {
 
-					buf[z] = 0;
+					buf[z + 1] = '0';
 					break;
 				} else {
 
@@ -1036,85 +1036,42 @@ String String::num_int64(int64_t p_num, int base, bool capitalize_hex) {
 	return s;
 }
 
-String String::num_real(double p_num) {
-
-	String s;
-	String sd;
-	/* integer part */
-
-	bool neg = p_num < 0;
-	p_num = ABS(p_num);
-	int intn = (int)p_num;
-
-	/* decimal part */
-
-	if ((int)p_num != p_num) {
-
-		double dec = p_num - (float)((int)p_num);
-
-		int digit = 0;
-		int decimals = MAX_DIGITS;
-
-		int dec_int = 0;
-		int dec_max = 0;
-
-		while (true) {
-
-			dec *= 10.0;
-			dec_int = dec_int * 10 + (int)dec % 10;
-			dec_max = dec_max * 10 + 9;
-			digit++;
-
-			if ((dec - (float)((int)dec)) < 1e-6)
-				break;
-
-			if (digit == decimals)
-				break;
+String String::num_real(double p_num, bool p_trailing) {
+	if (p_num == (double)(int64_t)p_num) {
+		if (p_trailing) {
+			return num_int64((int64_t)p_num) + ".0";
 		}
-
-		dec *= 10;
-		int last = (int)dec % 10;
-
-		if (last > 5) {
-			if (dec_int == dec_max) {
-
-				dec_int = 0;
-				intn++;
-			} else {
-
-				dec_int++;
-			}
-		}
-
-		String decimal;
-		for (int i = 0; i < digit; i++) {
-
-			char num[2] = { 0, 0 };
-			num[0] = '0' + dec_int % 10;
-			decimal = num + decimal;
-			dec_int /= 10;
-		}
-		sd = '.' + decimal;
-	} else {
-		sd = ".0";
-	}
-
-	if (intn == 0)
-
-		s = "0";
-	else {
-		while (intn) {
-
-			CharType num = '0' + (intn % 10);
-			intn /= 10;
-			s = num + s;
+		else {
+			return num_int64((int64_t)p_num);
 		}
 	}
+	int decimals = 14;
+	// We want to align the digits to the above sane default, so we only need
+	// to subtract log10 for numbers with a positive power of ten magnitude.
+	const double abs_num = Math::abs(p_num);
+	if (abs_num > 10) {
+		decimals -= (int)floor(log10(abs_num));
+	}
+	return num(p_num, decimals);
+}
 
-	s = s + sd;
-	if (neg)
-		s = "-" + s;
-	return s;
+String String::num_real(float p_num, bool p_trailing) {
+	if (p_num == (float)(int64_t)p_num) {
+		if (p_trailing) {
+			return num_int64((int64_t)p_num) + ".0";
+		}
+		else {
+			return num_int64((int64_t)p_num);
+		}
+	}
+	int decimals = 6;
+	// We want to align the digits to the above sane default, so we only need
+	// to subtract log10 for numbers with a positive power of ten magnitude.
+	const float abs_num = Math::abs(p_num);
+	if (abs_num > 10) {
+		decimals -= (int)floor(log10(abs_num));
+	}
+	return num(p_num, decimals);
 }
 
 String String::num_scientific(double p_num) {

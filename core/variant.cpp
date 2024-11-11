@@ -1486,8 +1486,8 @@ Variant::operator String() const {
 
 		case NIL: return "";
 		case BOOL: return _data._bool ? "True" : "False";
-		case INT: return String::num(_data._int);
-		case REAL: return String::num(_data._real);
+		case INT: return itos(_data._int);
+		case REAL: return String::num_real(_data._real, true);
 		case STRING: return *reinterpret_cast<const String *>(_data._mem);
 		case VECTOR2: return "(" + operator Vector2() + ")";
 		case RECT2: return "(" + operator Rect2() + ")";

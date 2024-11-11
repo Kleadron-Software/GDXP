@@ -173,5 +173,5 @@ Vector3 Vector3::cubic_interpolate(const Vector3& p_b,const Vector3& p_pre_a, co
 #endif
 Vector3::operator String() const {
 
-	return (rtos(x) + ", " + rtos(y) + ", " + rtos(z));
+	return (String::num_real(x, true) + ", " + String::num_real(y, true) + ", " + String::num_real(z, true));
 }
