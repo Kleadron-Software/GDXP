@@ -431,7 +431,7 @@ struct Point2i {
 
 	float get_aspect() const { return width / (float)height; }
 
-	operator String() const { return String::num_int64(x) + ", " + String::num_int64(y); }
+	operator String() const { return String::num_int32(x) + ", " + String::num_int32(y); }
 
 	operator Vector2() const { return Vector2(x, y); }
 	inline Point2i(const Vector2 &p_vec2) {

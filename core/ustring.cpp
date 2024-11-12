@@ -1036,6 +1036,46 @@ String String::num_int64(int64_t p_num, int base, bool capitalize_hex) {
 	return s;
 }
 
+// same thing... but int32 because that makes sense?
+String String::num_int32(int32_t p_num, int base, bool capitalize_hex) {
+
+	bool sign = p_num < 0;
+	int32_t num = ABS(p_num);
+
+	int32_t n = num;
+
+	int chars = 0;
+	do {
+		n /= base;
+		chars++;
+	} while (n);
+
+	if (sign)
+		chars++;
+	String s;
+	s.resize(chars + 1);
+	CharType *c = s.ptr();
+	c[chars] = 0;
+	n = num;
+	do {
+		int mod = n % base;
+		if (mod >= 10) {
+			char a = (capitalize_hex ? 'A' : 'a');
+			c[--chars] = a + (mod - 10);
+		}
+		else {
+			c[--chars] = '0' + mod;
+		}
+
+		n /= base;
+	} while (n);
+
+	if (sign)
+		c[0] = '-';
+
+	return s;
+}
+
 String String::num_real(double p_num, bool p_trailing) {
 	if (p_num == (double)(int64_t)p_num) {
 		if (p_trailing) {

@@ -51,7 +51,7 @@ IP_Address::operator String() const {
 		if (i > 0)
 			ret = ret + ":";
 		uint16_t num = (field8[i * 2] << 8) + field8[i * 2 + 1];
-		ret = ret + String::num_int64(num, 16);
+		ret = ret + String::num_int32(num, 16);
 	};
 
 	return ret;

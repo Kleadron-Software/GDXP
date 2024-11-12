@@ -718,7 +718,7 @@ void TextEdit::_notification(int p_what) {
 				}
 
 				if (cache.line_number_w) {
-					String fc = String::num(line + 1);
+					String fc = String::num_int32(line + 1);
 					while (fc.length() < line_number_char_count) {
 						fc = line_num_padding + fc;
 					}
