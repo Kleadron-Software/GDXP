@@ -1,3 +1,8 @@
+# Archival Notice
+I currently have little interest in maintaining this right now. 
+I'll archive this but keep it public for anyone else interested in using it, either for basing their own project off of or for learning from.
+There may be a day I return to this.
+
 ## GDXP - What is this?
 
 ![Screenshot of a 3D scene in the GDXP editor](/editor_screenshot.png)
