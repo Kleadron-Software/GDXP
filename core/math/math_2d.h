@@ -154,6 +154,7 @@ struct Vector2 {
 	}
 
 	Vector2 floor() const;
+	Vector2 round() const;
 	Vector2 snapped(const Vector2 &p_by) const;
 	float get_aspect() const { return width / height; }
 

@@ -6487,6 +6487,11 @@ void VisualServerRaster::_render_canvas_item(CanvasItem *p_canvas_item, const Ma
 	Rect2 global_rect = xform.xform(rect);
 	global_rect.pos += p_clip_rect.pos;
 
+	if (OS::get_singleton()->get_use_pixel_snap()) {
+		xform.elements[2] = (xform.elements[2] + Point2(0.5, 0.5)).floor();
+		global_rect.pos = (global_rect.pos + Point2(0.5, 0.5)).floor();
+	}
+
 	if (global_rect.intersects(p_clip_rect) && ci->viewport.is_valid() && viewport_owner.owns(ci->viewport)) {
 
 		Viewport *vp = viewport_owner.get(ci->viewport);
@@ -6631,6 +6636,12 @@ void VisualServerRaster::_render_canvas(Canvas *p_canvas, const Matrix32 &p_tran
 		}
 	}
 
+	Matrix32 xform = p_transform;
+
+	if (OS::get_singleton()->get_use_pixel_snap()) {
+		xform.elements[2] = (xform.elements[2] + Point2(0.5, 0.5)).floor();
+	}
+
 	Rect2 clip_rect(viewport_rect.x, viewport_rect.y, viewport_rect.width, viewport_rect.height);
 	if (!has_mirror) {
 
@@ -6643,7 +6654,7 @@ void VisualServerRaster::_render_canvas(Canvas *p_canvas, const Matrix32 &p_tran
 			z_last_list[i] = NULL;
 		}
 		for (int i = 0; i < l; i++) {
-			_render_canvas_item(ci[i].item, p_transform, clip_rect, 1.0, 0, z_list, z_last_list, NULL, NULL);
+			_render_canvas_item(ci[i].item, xform, clip_rect, 1.0, 0, z_list, z_last_list, NULL, NULL);
 		}
 
 		for (int i = 0; i < z_range; i++) {
@@ -6661,22 +6672,22 @@ void VisualServerRaster::_render_canvas(Canvas *p_canvas, const Matrix32 &p_tran
 		for (int i = 0; i < l; i++) {
 
 			Canvas::ChildItem &ci = p_canvas->child_items[i];
-			_render_canvas_item_tree(ci.item, p_transform, clip_rect, p_canvas->modulate, p_lights);
+			_render_canvas_item_tree(ci.item, xform, clip_rect, p_canvas->modulate, p_lights);
 
 			//mirroring (useful for scrolling backgrounds)
 			if (ci.mirror.x != 0) {
 
-				Matrix32 xform2 = p_transform * Matrix32(0, Vector2(ci.mirror.x, 0));
+				Matrix32 xform2 = xform * Matrix32(0, Vector2(ci.mirror.x, 0));
 				_render_canvas_item_tree(ci.item, xform2, clip_rect, p_canvas->modulate, p_lights);
 			}
 			if (ci.mirror.y != 0) {
 
-				Matrix32 xform2 = p_transform * Matrix32(0, Vector2(0, ci.mirror.y));
+				Matrix32 xform2 = xform * Matrix32(0, Vector2(0, ci.mirror.y));
 				_render_canvas_item_tree(ci.item, xform2, clip_rect, p_canvas->modulate, p_lights);
 			}
 			if (ci.mirror.y != 0 && ci.mirror.x != 0) {
 
-				Matrix32 xform2 = p_transform * Matrix32(0, ci.mirror);
+				Matrix32 xform2 = xform * Matrix32(0, ci.mirror);
 				_render_canvas_item_tree(ci.item, xform2, clip_rect, p_canvas->modulate, p_lights);
 			}
 		}

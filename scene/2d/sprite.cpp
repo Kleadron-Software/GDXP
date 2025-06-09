@@ -81,10 +81,12 @@ void Sprite::_notification(int p_what) {
 			}
 
 			Point2 ofs = offset;
-			if (centered)
+			if (centered) {
 				ofs -= s / 2;
+			}
+
 			if (OS::get_singleton()->get_use_pixel_snap()) {
-				ofs = ofs.floor();
+				ofs = (ofs + Point2(0.5, 0.5)).floor();
 			}
 
 			Rect2 dst_rect(ofs, s);
@@ -278,6 +280,10 @@ Rect2 Sprite::get_item_rect() const {
 	if (centered)
 		ofs -= s / 2;
 
+	if (OS::get_singleton()->get_use_pixel_snap()) {
+		ofs = (ofs + Point2(0.5, 0.5)).floor();
+	}
+
 	if (s == Size2(0, 0))
 		s = Size2(1, 1);
 
@@ -426,11 +432,12 @@ void ViewportSprite::_notification(int p_what) {
 			src_rect.size = s;
 
 			Point2 ofs = offset;
-			if (centered)
+			if (centered) {
 				ofs -= s / 2;
+			}
 
 			if (OS::get_singleton()->get_use_pixel_snap()) {
-				ofs = ofs.floor();
+				ofs = (ofs + Point2(0.5, 0.5)).floor();
 			}
 			Rect2 dst_rect(ofs, s);
 			texture->draw_rect_region(ci, dst_rect, src_rect, modulate);
@@ -518,8 +525,13 @@ Rect2 ViewportSprite::get_item_rect() const {
 
 	s = texture->get_size();
 	Point2 ofs = offset;
-	if (centered)
+	if (centered) {
 		ofs -= s / 2;
+	}
+
+	if (OS::get_singleton()->get_use_pixel_snap()) {
+		ofs = (ofs + Point2(0.5, 0.5)).floor();
+	}
 
 	if (s == Size2(0, 0))
 		s = Size2(1, 1);

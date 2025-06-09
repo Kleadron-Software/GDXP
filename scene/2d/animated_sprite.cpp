@@ -386,13 +386,16 @@ void AnimatedSprite::_notification(int p_what) {
 
 			Size2i s;
 			s = texture->get_size();
+
 			Point2 ofs = offset;
-			if (centered)
+			if (centered) {
 				ofs -= s / 2;
+			}
 
 			if (OS::get_singleton()->get_use_pixel_snap()) {
-				ofs = ofs.floor();
+				ofs = (ofs + Point2(0.5, 0.5)).floor();
 			}
+
 			Rect2 dst_rect(ofs, s);
 
 			if (hflip)
@@ -533,6 +536,10 @@ Rect2 AnimatedSprite::get_item_rect() const {
 	Point2 ofs = offset;
 	if (centered)
 		ofs -= s / 2;
+
+	if (OS::get_singleton()->get_use_pixel_snap()) {
+		ofs = (ofs + Point2(0.5, 0.5)).floor();
+	}
 
 	if (s == Size2(0, 0))
 		s = Size2(1, 1);

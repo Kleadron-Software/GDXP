@@ -30,6 +30,7 @@
 
 #include "parallax_background.h"
 #include "parallax_layer.h"
+#include "os/os.h"
 
 void ParallaxBackground::_notification(int p_what) {
 
@@ -97,6 +98,10 @@ void ParallaxBackground::_update_scroll() {
 			ofs.y = limit_end.y - vps.y;
 	}
 	ofs = -ofs;
+
+	if (OS::get_singleton()->get_use_pixel_snap()) {
+		ofs = (ofs + Point2(0.5, 0.5)).floor();
+	}
 
 	final_offset = ofs;
 
