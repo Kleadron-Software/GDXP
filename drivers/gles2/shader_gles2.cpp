@@ -258,7 +258,7 @@ ShaderGLES2::Version *ShaderGLES2::get_current_version() {
 
 	Vector<const char *> strings;
 #ifdef GLEW_ENABLED
-	//strings.push_back("#version 120\n"); //ATI requieres this before anything
+	strings.push_back("#version 120\n"); //ATI requieres this before anything
 #endif
 	int define_line_ofs = 1;
 
